@@ -28,13 +28,13 @@ env:
 jobs:
   upgrade-version:
     name: Upgrade Version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       versao: ${{ steps.set_version.outputs.versao }}
       sha: ${{ steps.commit_version.outputs.sha }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -111,19 +111,19 @@ jobs:
   build-and-release-linux:
     name: Build and Release Linux
     needs: [ upgrade-version ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     env:
       VERSION: ${{ needs.upgrade-version.outputs.versao }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.upgrade-version.outputs.sha }}
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: api/go.sum
@@ -156,7 +156,7 @@ jobs:
           zip -r "$GITHUB_WORKSPACE/poc-monorepo-${VERSION}-linux.zip" .
 
       - name: Upload zip
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: zip-linux
           path: poc-monorepo-${{ env.VERSION }}-linux.zip
@@ -173,12 +173,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.upgrade-version.outputs.sha }}
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: api/go.sum
@@ -206,7 +206,7 @@ jobs:
           Compress-Archive -Path dist\* -DestinationPath "poc-monorepo-$env:VERSION-windows.zip"
 
       - name: Upload zip
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: zip-windows
           path: poc-monorepo-${{ env.VERSION }}-windows.zip
@@ -216,12 +216,12 @@ jobs:
   create-release:
     name: Create Tag and Release
     needs: [ upgrade-version, build-and-release-linux, build-and-release-windows ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       VERSION: ${{ needs.upgrade-version.outputs.versao }}
     steps:
       - name: Download zips
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: zip-*
           merge-multiple: true
