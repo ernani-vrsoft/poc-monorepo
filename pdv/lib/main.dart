@@ -30,6 +30,8 @@ class PdvApp extends StatelessWidget {
 class _VersionFooter extends StatelessWidget {
   const _VersionFooter();
 
+  static final _version = loadAppVersion();
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -39,9 +41,12 @@ class _VersionFooter extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         child: Align(
           alignment: Alignment.centerRight,
-          child: Text(
-            'Versão $appVersion',
-            style: theme.textTheme.bodySmall,
+          child: FutureBuilder<String>(
+            future: _version,
+            builder: (_, snap) => Text(
+              'Versão ${snap.data ?? '...'}',
+              style: theme.textTheme.bodySmall,
+            ),
           ),
         ),
       ),

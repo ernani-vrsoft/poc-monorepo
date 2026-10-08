@@ -1,3 +1,11 @@
-/// Versão da aplicação, injetada pelo workflow de release com o nome da tag
-/// (`--dart-define=APP_VERSION=v1.2.3`). Em builds locais fica `dev`.
-const appVersion = String.fromEnvironment('APP_VERSION', defaultValue: 'dev');
+import 'package:package_info_plus/package_info_plus.dart';
+
+/// Versão da aplicação no formato da tag (v1.2.3 ou v1.2.3-4), montada a partir
+/// do `version` do pubspec.yaml (1.2.3+0 ou 1.2.3+4), que é atualizado pelo
+/// workflow de release.
+Future<String> loadAppVersion() async {
+  final info = await PackageInfo.fromPlatform();
+  final build = info.buildNumber;
+  if (build.isEmpty || build == '0') return 'v${info.version}';
+  return 'v${info.version}-$build';
+}

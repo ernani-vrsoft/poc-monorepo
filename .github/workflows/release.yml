@@ -17,6 +17,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 env:
   GO_VERSION: '1.22.x'
   FLUTTER_VERSION: '3.44.9'
@@ -27,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       versao: ${{ steps.set_version.outputs.versao }}
+      sha: ${{ steps.commit_version.outputs.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -76,6 +81,33 @@ jobs:
           echo "Versao atual: v$ATUAL -> Nova versao: $NOVA"
           echo "versao=$NOVA" >> "$GITHUB_OUTPUT"
 
+      - name: Atualiza versao no repositorio
+        id: commit_version
+        env:
+          VERSION: ${{ steps.set_version.outputs.versao }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          # v1.2.3 -> 1.2.3+0 | v1.2.3-4 -> 1.2.3+4
+          V="${VERSION#v}"
+          BUILD_NAME="${V%%-*}"
+          BUILD_NUMBER=0
+          if [[ "$V" == *-* ]]; then
+            BUILD_NUMBER="${V##*-}"
+          fi
+          sed -i -E "s/^version: .*/version: ${BUILD_NAME}+${BUILD_NUMBER}/" pdv/pubspec.yaml
+
+          # Se uma execucao anterior ja commitou essa versao e falhou depois, nao ha o que commitar
+          if git diff --quiet; then
+            echo "pubspec.yaml ja esta na versao $VERSION"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -am "chore(release): $VERSION"
+            git push origin "HEAD:$BRANCH"
+          fi
+
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
   build-and-release-linux:
     name: Build and Release Linux
     needs: [ upgrade-version ]
@@ -88,7 +120,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ needs.upgrade-version.outputs.sha }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -114,17 +146,7 @@ jobs:
         working-directory: pdv
         run: |
           flutter pub get
-          # v1.2.3 -> 1.2.3+0 | v1.2.3-4 -> 1.2.3+4 (metadado do executavel)
-          V="${VERSION#v}"
-          BUILD_NAME="${V%%-*}"
-          BUILD_NUMBER=0
-          if [[ "$V" == *-* ]]; then
-            BUILD_NUMBER="${V##*-}"
-          fi
-          flutter build linux --release \
-            --build-name="$BUILD_NAME" \
-            --build-number="$BUILD_NUMBER" \
-            --dart-define=APP_VERSION="$VERSION"
+          flutter build linux --release
           cp -r build/linux/x64/release/bundle/. "$GITHUB_WORKSPACE/dist/"
 
       - name: Archive Release
@@ -153,7 +175,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ needs.upgrade-version.outputs.sha }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -176,14 +198,7 @@ jobs:
         working-directory: pdv
         run: |
           flutter pub get
-          # v1.2.3 -> 1.2.3+0 | v1.2.3-4 -> 1.2.3+4 (metadado do executavel)
-          $parts = $env:VERSION.TrimStart('v').Split('-')
-          $buildName = $parts[0]
-          $buildNumber = if ($parts.Length -gt 1) { $parts[1] } else { '0' }
-          flutter build windows --release `
-            --build-name="$buildName" `
-            --build-number="$buildNumber" `
-            --dart-define=APP_VERSION="$env:VERSION"
+          flutter build windows --release
           Copy-Item -Recurse -Path build\windows\x64\runner\Release\* -Destination "$env:GITHUB_WORKSPACE\dist"
 
       - name: Archive Release
@@ -217,7 +232,7 @@ jobs:
         with:
           name: ${{ env.VERSION }}
           tag: ${{ env.VERSION }}
-          commit: ${{ github.sha }}
+          commit: ${{ needs.upgrade-version.outputs.sha }}
           artifacts: dist/*.zip
           generateReleaseNotes: true
           makeLatest: ${{ github.ref_name == 'main' }}
