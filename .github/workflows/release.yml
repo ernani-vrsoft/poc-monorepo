@@ -114,7 +114,17 @@ jobs:
         working-directory: pdv
         run: |
           flutter pub get
-          flutter build linux --release --build-name="${VERSION#v}"
+          # v1.2.3 -> 1.2.3+0 | v1.2.3-4 -> 1.2.3+4 (metadado do executavel)
+          V="${VERSION#v}"
+          BUILD_NAME="${V%%-*}"
+          BUILD_NUMBER=0
+          if [[ "$V" == *-* ]]; then
+            BUILD_NUMBER="${V##*-}"
+          fi
+          flutter build linux --release \
+            --build-name="$BUILD_NAME" \
+            --build-number="$BUILD_NUMBER" \
+            --dart-define=APP_VERSION="$VERSION"
           cp -r build/linux/x64/release/bundle/. "$GITHUB_WORKSPACE/dist/"
 
       - name: Archive Release
@@ -166,7 +176,14 @@ jobs:
         working-directory: pdv
         run: |
           flutter pub get
-          flutter build windows --release --build-name="$($env:VERSION.TrimStart('v'))"
+          # v1.2.3 -> 1.2.3+0 | v1.2.3-4 -> 1.2.3+4 (metadado do executavel)
+          $parts = $env:VERSION.TrimStart('v').Split('-')
+          $buildName = $parts[0]
+          $buildNumber = if ($parts.Length -gt 1) { $parts[1] } else { '0' }
+          flutter build windows --release `
+            --build-name="$buildName" `
+            --build-number="$buildNumber" `
+            --dart-define=APP_VERSION="$env:VERSION"
           Copy-Item -Recurse -Path build\windows\x64\runner\Release\* -Destination "$env:GITHUB_WORKSPACE\dist"
 
       - name: Archive Release
