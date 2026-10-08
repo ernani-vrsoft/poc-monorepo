@@ -39,3 +39,11 @@ flutter run -d linux --dart-define=API_URL=http://192.168.0.10:12001
 | PUT    | `/pessoas/{id}` | `{"nome": "..."}` |
 | DELETE | `/pessoas/{id}` |                   |
 | GET    | `/health`       |                   |
+## Versão
+
+A versão do monorepo fica em `pdv/pubspec.yaml` (`version: X.Y.Z+N`) e aparece
+no rodapé do PDV como `vX.Y.Z` (ou `vX.Y.Z-N` para builds fora da `main`).
+
+Não altere esse valor manualmente: o workflow **Release** (Actions → Release →
+Run workflow) calcula a próxima versão, atualiza o `pubspec.yaml`, faz commit na
+branch, gera os zips de Linux e Windows e cria a tag/release nesse commit.
