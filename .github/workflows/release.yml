@@ -108,21 +108,20 @@ jobs:
 
       - name: Build api
         working-directory: api
-        run: CGO_ENABLED=0 go build -o "$GITHUB_WORKSPACE/dist/api/api" ./cmd/api
+        run: CGO_ENABLED=0 go build -o "$GITHUB_WORKSPACE/dist/api" ./cmd/api
 
       - name: Build pdv
         working-directory: pdv
         run: |
           flutter pub get
           flutter build linux --release --build-name="${VERSION#v}"
-          mkdir -p "$GITHUB_WORKSPACE/dist/pdv"
-          cp -r build/linux/x64/release/bundle/. "$GITHUB_WORKSPACE/dist/pdv/"
+          cp -r build/linux/x64/release/bundle/. "$GITHUB_WORKSPACE/dist/"
 
       - name: Archive Release
         run: |
-          chmod +x dist/api/api dist/pdv/pdv
+          chmod +x dist/api dist/pdv
           cd dist
-          zip -r "$GITHUB_WORKSPACE/poc-monorepo-${VERSION}-linux.zip" api pdv
+          zip -r "$GITHUB_WORKSPACE/poc-monorepo-${VERSION}-linux.zip" .
 
       - name: Upload zip
         uses: actions/upload-artifact@v4
@@ -161,19 +160,18 @@ jobs:
         working-directory: api
         env:
           CGO_ENABLED: '0'
-        run: go build -o "$env:GITHUB_WORKSPACE\dist\api\api.exe" ./cmd/api
+        run: go build -o "$env:GITHUB_WORKSPACE\dist\api.exe" ./cmd/api
 
       - name: Build pdv
         working-directory: pdv
         run: |
           flutter pub get
           flutter build windows --release --build-name="$($env:VERSION.TrimStart('v'))"
-          New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\dist\pdv" | Out-Null
-          Copy-Item -Recurse -Path build\windows\x64\runner\Release\* -Destination "$env:GITHUB_WORKSPACE\dist\pdv"
+          Copy-Item -Recurse -Path build\windows\x64\runner\Release\* -Destination "$env:GITHUB_WORKSPACE\dist"
 
       - name: Archive Release
         run: |
-          Compress-Archive -Path dist\api, dist\pdv -DestinationPath "poc-monorepo-$env:VERSION-windows.zip"
+          Compress-Archive -Path dist\* -DestinationPath "poc-monorepo-$env:VERSION-windows.zip"
 
       - name: Upload zip
         uses: actions/upload-artifact@v4
