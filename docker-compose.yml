@@ -1,0 +1,29 @@
+services:
+  mongo:
+    image: mongo:8.2.12
+    container_name: poc-mongo
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./api
+    container_name: poc-api
+    environment:
+      PORT: "12001"
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: poc
+    ports:
+      - "12001:12001"
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo-data:

@@ -1,0 +1,12 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Go
+api/api
+
+# Flutter
+pdv/.dart_tool/
+pdv/build/
+pdv/.flutter-plugins-dependencies
